@@ -1,0 +1,122 @@
+# Задание 1. Исследование изменения состояния
+print("Задание 1. Изменение состояния переменной x:")
+x = 10
+print(f"Шаг 1: x = {x}")
+x = x + 5
+print(f"Шаг 2: x = {x}")
+x = x * 2
+print(f"Шаг 3: x = {x}")
+x = x - 8
+print(f"Шаг 4: x = {x}")
+x = x // 2
+print(f"Шаг 5: x = {x}")
+print()
+
+# Задание 2. Расчет стоимости покупки
+print("Задание 2. Расчет стоимости покупки")
+price_per_item = float(input("Цена товара: "))
+quantity = int(input("Количество: "))
+discount_percent = float(input("Скидка (%): "))
+
+total_without_discount = price_per_item * quantity
+discount_amount = total_without_discount * discount_percent / 100
+total_with_discount = total_without_discount - discount_amount
+
+print(f"Стоимость без скидки: {total_without_discount:.2f}")
+print(f"Размер скидки: {discount_amount:.2f}")
+print(f"К оплате: {total_with_discount:.2f}")
+print()
+
+# Задание 3. Управление выполнением с помощью условия
+print("Задание 3. Определение оценки по баллу")
+score = input("Введите балл от 0 до 100: ")
+if not score.isdigit():
+    print("Ошибка: введено не число")
+else:
+    score = int(score)
+    if 0 <= score <= 100:
+        if score >= 90:
+            grade = "A"
+        elif score >= 75:
+            grade = "B"
+        elif score >= 50:
+            grade = "C"
+        else:
+            grade = "F"
+        print(f"Оценка: {grade}")
+    else:
+        print("Ошибка: балл вне диапазона 0-100")
+print()
+
+# Задание 4. Накопление состояния в цикле
+print("Задание 4. Анализ списка чисел")
+numbers = [12, -5, 8, -3, 21, 0, 14, -7]
+sum_all = 0
+sum_positive = 0
+count_positive = 0
+count_negative = 0
+count_zero = 0
+
+print("Итерации и изменение переменных:")
+for num in numbers:
+    sum_all += num
+    if num > 0:
+        sum_positive += num
+        count_positive += 1
+    elif num < 0:
+        count_negative += 1
+    else:
+        count_zero += 1
+    print(f"Обработка {num}: sum_all={sum_all}, sum_positive={sum_positive}, count_positive={count_positive}, count_negative={count_negative}, count_zero={count_zero}")
+
+print(f"Сумма всех чисел: {sum_all}")
+print(f"Сумма положительных чисел: {sum_positive}")
+print(f"Количество положительных: {count_positive}")
+print(f"Количество отрицательных: {count_negative}")
+print(f"Количество нулей: {count_zero}")
+print()
+
+# Задание 5. Поиск максимального значения
+print("Задание 5. Поиск максимума в списке")
+scores = [67, 82, 45, 91, 76, 88, 54]
+maximum = scores[0]
+
+print("score maximum до score > maximum maximum после")
+for score in scores:
+    before = maximum
+    if score > maximum:
+        maximum = score
+    after = maximum
+    print(f"{score:>5} {before:>7} {'>' if score > before else ' '} {after}")
+print(f"Максимальное значение: {maximum}")
+print()
+
+# Индивидуальное задание №5: Четные и нечетные числа (10 целых)
+print("Индивидуальное задание №5. Четные и нечетные числа")
+nums = []
+
+print("Введите 10 целых чисел:")
+for i in range(10):
+    while True:
+        try:
+            val = int(input(f"Число {i+1}: "))
+            break
+        except ValueError:
+            print("Ошибка! Введите целое число.")
+    nums.append(val)
+
+count_even = 0
+sum_even = 0
+count_odd = 0
+sum_odd = 0
+
+for n in nums:
+    if n % 2 == 0:
+        count_even += 1
+        sum_even += n
+    else:
+        count_odd += 1
+        sum_odd += n
+
+print(f"Четных чисел: {count_even}, сумма четных: {sum_even}")
+print(f"Нечетных чисел: {count_odd}, сумма нечетных: {sum_odd}")
