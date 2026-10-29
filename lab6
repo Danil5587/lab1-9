@@ -1,0 +1,143 @@
+from typing import Protocol
+from datetime import datetime
+import unittest
+
+class DeliveryChannel(Protocol):
+    """Интерфейс для каналов доставки учебных материалов."""
+    def send(self, recipient: str, content: str) -> None:
+        """Отправляет контент получателю."""
+        ...
+
+class EmailDelivery:
+    """Отправка через Email."""
+    def send(self, recipient: str, content: str) -> None:
+        print(f"[Email to {recipient}] {content}")
+
+class LinkDelivery:
+    """Отправка ссылок, запрещает отправку просроченной ссылки."""
+    def __init__(self):
+        self._current_time = datetime.now
+
+    def send(self, recipient: str, content: str) -> None:
+        # Контент включает ссылку и срок действия в формате "ссылка|YYYY-MM-DD HH:MM:SS"
+        try:
+            link, expiry_str = content.split('|')
+            expiry = datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
+        except Exception:
+            raise ValueError("Некорректный формат ссылки или даты")
+
+        if self._current_time() > expiry:
+            raise ValueError("Нельзя отправлять просроченную ссылку")
+
+        print(f"[Link to {recipient}] {link}")
+
+class MemoryDelivery:
+    """Запоминает отправленные сообщения для тестирования."""
+    def __init__(self):
+        self.messages = []
+
+    def send(self, recipient: str, content: str) -> None:
+        self.messages.append((recipient, content))
+
+class Student:
+    """Модель студента с id и именем."""
+    def __init__(self, student_id: int, name: str):
+        if isinstance(student_id, bool) or not isinstance(student_id, int) or student_id <= 0:
+            raise TypeError("Идентификатор должен быть положительным целым числом")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("Имя студента не может быть пустым")
+        self.student_id = student_id
+        self.name = name.strip()
+
+class MaterialService:
+    """Сервис доставки учебных материалов студентам через композицию."""
+    def __init__(self, delivery_channel: DeliveryChannel):
+        self._students = {}
+        self._delivery_channel = delivery_channel
+
+    def register(self, student: Student) -> None:
+        if student.student_id in self._students:
+            raise ValueError("Студент уже зарегистрирован")
+        self._students[student.student_id] = student
+
+    def deliver_material(self, student_id: int, content: str) -> None:
+        student = self._get_student(student_id)
+        self._delivery_channel.send(student.name, content)
+
+    def _get_student(self, student_id: int) -> Student:
+        try:
+            return self._students[student_id]
+        except KeyError as err:
+            raise KeyError("Студент не найден") from err
+
+# Демонстрационный запуск
+
+def demo():
+    print("Пример использования EmailDelivery:")
+    email_delivery = EmailDelivery()
+    service_email = MaterialService(email_delivery)
+    service_email.register(Student(1, "Amina"))
+    service_email.deliver_material(1, "Ссылка на учебный материал по электронной почте")
+
+    print("\nПример использования LinkDelivery с не просроченной ссылкой:")
+    from datetime import timedelta
+    link_delivery = LinkDelivery()
+    service_link = MaterialService(link_delivery)
+    service_link.register(Student(2, "Bek"))
+    future_time = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+    service_link.deliver_material(2, f"http://example.com/material|{future_time}")
+
+    print("\nПример использования MemoryDelivery для тестирования:")
+    memory_delivery = MemoryDelivery()
+    service_mem = MaterialService(memory_delivery)
+    service_mem.register(Student(3, "Chinara"))
+    service_mem.deliver_material(3, "Тестовый материал")
+    print(memory_delivery.messages)  # [('Chinara', 'Тестовый материал')]
+
+# Автоматические тесты
+
+class MaterialServiceTests(unittest.TestCase):
+    def setUp(self):
+        self.memory = MemoryDelivery()
+        self.service = MaterialService(self.memory)
+        self.student = Student(1, "Test Student")
+        self.service.register(self.student)
+
+    def test_register_and_deliver(self):
+        self.service.deliver_material(1, "test content")
+        self.assertEqual(self.memory.messages, [("Test Student", "test content")])
+
+    def test_duplicate_registration_raises(self):
+        with self.assertRaises(ValueError):
+            self.service.register(self.student)
+
+    def test_unknown_student_raises(self):
+        with self.assertRaises(KeyError):
+            self.service.deliver_material(999, "content")
+
+    def test_link_delivery_allows_valid_link(self):
+        from datetime import timedelta
+        link_delivery = LinkDelivery()
+        service = MaterialService(link_delivery)
+        student = Student(2, "Link Student")
+        service.register(student)
+        future_time = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            service.deliver_material(2, f"http://valid-link|{future_time}")
+        except Exception:
+            self.fail("LinkDelivery raised an exception for valid link")
+
+    def test_link_delivery_blocks_expired_link(self):
+        from datetime import timedelta
+        link_delivery = LinkDelivery()
+        service = MaterialService(link_delivery)
+        student = Student(3, "Link Student")
+        service.register(student)
+        past_time = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+        with self.assertRaises(ValueError):
+            service.deliver_material(3, f"http://expired-link|{past_time}")
+
+if __name__ == "__main__":
+    demo()
+    print("\nЗапуск тестов...\n")
+    unittest.main(argv=['first-arg-is-ignored'], exit=False)
