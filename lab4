@@ -1,0 +1,111 @@
+def validate_scores(scores):
+    """Возвращает проверенную копию последовательности баллов."""
+    if not isinstance(scores, (list, tuple)):
+        raise TypeError("scores должен быть списком или кортежем")
+    checked = []
+    for score in scores:
+        if isinstance(score, bool) or not isinstance(score, (int, float)):
+            raise TypeError("Балл должен быть числом")
+        if not 0 <= score <= 100:
+            raise ValueError("Балл должен быть от 0 до 100")
+        checked.append(float(score))
+    return checked
+
+def validate_student(student):
+    """Проверяет обязательные поля записи студента."""
+    if not isinstance(student, dict):
+        raise TypeError("Запись студента должна быть словарём")
+    required = {"id", "name", "scores"}
+    missing = required - student.keys()
+    if missing:
+        raise ValueError(f"Отсутствуют поля: {sorted(missing)}")
+PASSING_AVERAGE = 50
+
+def calculate_average(scores):
+    """Возвращает среднее или None для пустой последовательности."""
+    return sum(scores) / len(scores) if scores else None
+
+def determine_status(average):
+    """Возвращает статус по среднему баллу."""
+    if average is None:
+        return "нет данных"
+    return "допущен" if average >= PASSING_AVERAGE else "не допущен"
+from .calculations import calculate_average, determine_status
+from .validation import validate_scores, validate_student
+
+def build_student_result(student):
+    """Формирует новую итоговую запись одного студента."""
+    validate_student(student)
+    scores = validate_scores(student["scores"])
+    average = calculate_average(scores)
+    return {
+        "id": student["id"],
+        "name": student["name"],
+        "average": average,
+        "status": determine_status(average),
+    }
+
+def _sort_key(item):
+    average = item["average"]
+    return average is not None, average or 0
+
+def build_rating(students):
+    """Возвращает рейтинг, не изменяя исходные записи."""
+    results = [build_student_result(item) for item in students]
+    return sorted(results, key=_sort_key, reverse=True)
+def format_average(value):
+    return "—" if value is None else f"{value:.2f}"
+
+def format_rating(rows):
+    lines = ["Рейтинг группы"]
+    for position, row in enumerate(rows, start=1):
+        average = format_average(row["average"])
+        lines.append(f"{position}. {row['name']}: {average} — {row['status']}")
+    return "\n".join(lines)
+from .rating import build_rating, build_student_result
+
+__all__ = ["build_rating", "build_student_result"]
+from .rating import build_rating
+from .report import format_rating
+
+def load_demo_data():
+    return [
+        {"id": 101, "name": "Amina", "scores": [88, 92, 79]},
+        {"id": 102, "name": "Dias", "scores": [45, 52, 48]},
+        {"id": 103, "name": "Mira", "scores": []},
+    ]
+
+def main():
+    students = load_demo_data()
+    rating = build_rating(students)
+    print(format_rating(rating))
+
+if __name__ == "__main__":
+    main()
+import unittest
+from university_rating.calculations import calculate_average, determine_status
+from university_rating.rating import build_rating
+from university_rating.validation import validate_scores
+
+class RatingTests(unittest.TestCase):
+    def test_empty_average(self):
+        self.assertIsNone(calculate_average([]))
+
+    def test_status_boundary(self):
+        self.assertEqual(determine_status(49.99), "не допущен")
+        self.assertEqual(determine_status(50), "допущен")
+
+    def test_invalid_score(self):
+        with self.assertRaises(ValueError):
+            validate_scores([80, 101])
+
+    def test_source_is_not_changed(self):
+        students = [{"id": 1, "name": "Test", "scores": [70, 80]}]
+        before = [{"id": 1, "name": "Test", "scores": [70, 80]}]
+        build_rating(students)
+        self.assertEqual(students, before)
+
+if __name__ == "__main__":
+    unittest.main()
+python -m university_rating.main
+python -m unittest discover -s tests -v
