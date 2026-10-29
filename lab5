@@ -1,0 +1,138 @@
+class Student:
+    """Студент с защищённой коллекцией оценок."""
+    def __init__(self, student_id, name, group):
+        if isinstance(student_id, bool) or not isinstance(student_id, int):
+            raise TypeError("Идентификатор должен быть целым числом")
+        if student_id <= 0:
+            raise ValueError("Идентификатор должен быть положительным")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("Имя не должно быть пустым")
+        if not isinstance(group, str) or not group.strip():
+            raise ValueError("Группа не должна быть пустой")
+        self.student_id = student_id
+        self.name = name.strip()
+        self.group = group.strip()
+        self._scores = []
+
+    def add_score(self, score):
+        """Добавляет корректный балл и не возвращает отчёт."""
+        if isinstance(score, bool) or not isinstance(score, (int, float)):
+            raise TypeError("Балл должен быть числом")
+        if not 0 <= score <= 100:
+            raise ValueError("Балл должен быть от 0 до 100")
+        self._scores.append(float(score))
+
+    @property
+    def scores(self):
+        """Возвращает неизменяемый снимок оценок."""
+        return tuple(self._scores)
+
+    @property
+    def average(self):
+        """Возвращает среднее или None при отсутствии оценок."""
+        if not self._scores:
+            return None
+        return sum(self._scores) / len(self._scores)
+
+    @property
+    def status(self):
+        if self.average is None:
+            return "нет данных"
+        return "допущен" if self.average >= 50 else "не допущен"
+
+    def __repr__(self):
+        return (f"Student(student_id={self.student_id!r}, "
+                f"name={self.name!r}, group={self.group!r})")
+
+
+class GradeBook:
+    """Журнал регистрации и оценки студентов."""
+    def __init__(self):
+        self._students = {}
+
+    def register(self, student):
+        if not isinstance(student, Student):
+            raise TypeError("Ожидается объект Student")
+        if student.student_id in self._students:
+            raise ValueError("Студент уже зарегистрирован")
+        self._students[student.student_id] = student
+
+    def add_score(self, student_id, score):
+        try:
+            student = self._students[student_id]
+        except KeyError as error:
+            raise KeyError("Студент не найден") from error
+        student.add_score(score)
+
+    def find(self, student_id):
+        return self._students.get(student_id)
+
+    def rating(self):
+        """Возвращает кортеж студентов, отсортированных по среднему баллу."""
+        return tuple(sorted(
+            self._students.values(),
+            key=lambda student: (student.average is not None, student.average or 0),
+            reverse=True,
+        ))
+
+
+if __name__ == "__main__":
+    # Демонстрационный запуск
+    book = GradeBook()
+    book.register(Student(101, "Amina", "IS-24-1"))
+    book.register(Student(102, "Dias", "IS-24-1"))
+    book.register(Student(103, "Mira", "IS-24-1"))
+
+    for score in (88, 92, 79):
+        book.add_score(101, score)
+    for score in (45, 52, 48):
+        book.add_score(102, score)
+
+    for student in book.rating():
+        avg = "—" if student.average is None else f"{student.average:.2f}"
+        print(f"{student.name}: {avg}; {student.status}")
+
+    # Автоматические тесты
+    import unittest
+
+    class StudentTests(unittest.TestCase):
+        def test_average_and_snapshot(self):
+            student = Student(1, "Amina", "IS-24-1")
+            student.add_score(80)
+            student.add_score(90)
+            self.assertEqual(student.scores, (80.0, 90.0))
+            self.assertEqual(student.average, 85)
+
+        def test_invalid_score_keeps_state(self):
+            student = Student(1, "Amina", "IS-24-1")
+            with self.assertRaises(ValueError):
+                student.add_score(101)
+            self.assertEqual(student.scores, ())
+
+        def test_register_duplicate_raises(self):
+            book = GradeBook()
+            student = Student(1, "Amina", "IS-24-1")
+            book.register(student)
+            with self.assertRaises(ValueError):
+                book.register(student)
+
+        def test_add_score_unknown_student_raises(self):
+            book = GradeBook()
+            with self.assertRaises(KeyError):
+                book.add_score(999, 50)
+
+        def test_rating_sorting(self):
+            book = GradeBook()
+            s1 = Student(1, "A", "G1")
+            s2 = Student(2, "B", "G1")
+            s3 = Student(3, "C", "G1")
+            s1.add_score(90)
+            s2.add_score(70)
+            book.register(s1)
+            book.register(s2)
+            book.register(s3)
+            rating = book.rating()
+            self.assertEqual(rating[0], s1)
+            self.assertEqual(rating[-1], s3)
+
+    unittest.main(argv=['first-arg-is-ignored'], exit=False)
