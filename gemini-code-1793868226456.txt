@@ -1,0 +1,142 @@
+% ==========================================
+% Лабораторная работа 10: Логическое программирование в SWI-Prolog
+% Полный файл: lab10.pl
+% ==========================================
+
+% --- Студенты и дисциплины ---
+student(aida).
+student(miras).
+student(dana).
+student(timur).
+student(aliya). % Добавлено в Задании 1
+
+course(programming_1).
+course(programming_2).
+course(data_structures).
+course(databases).
+course(artificial_intelligence).
+course(machine_learning).
+
+% --- Успеваемость (completed(Student, Course)) ---
+completed(aida, programming_1).
+completed(aida, programming_2).
+completed(aida, data_structures).
+completed(aida, databases).
+completed(miras, programming_1).
+completed(miras, databases).
+completed(dana, programming_1).
+completed(dana, programming_2).
+completed(dana, data_structures).
+completed(timur, programming_1).
+completed(aliya, programming_1). % Добавлено в Задании 1
+completed(aliya, programming_2). % Добавлено в Задании 1
+
+% --- Пререквизиты (requires(Course, Prerequisite)) ---
+requires(programming_2, programming_1).
+requires(data_structures, programming_2).
+requires(artificial_intelligence, data_structures).
+requires(artificial_intelligence, databases).
+requires(machine_learning, artificial_intelligence).
+
+% --- Задание 2: Правила для кандидатов ---
+ai_candidate(Student) :-
+    completed(Student, data_structures),
+    completed(Student, databases).
+
+strong_student(Student) :-
+    completed(Student, programming_2),
+    completed(Student, data_structures).
+
+% --- Задание 4: Проверка непосредственного допуска ---
+missing_direct(Student, Course, Prerequisite) :-
+    student(Student),
+    requires(Course, Prerequisite),
+    \+ completed(Student, Prerequisite).
+
+immediate_eligible(Student, Course) :-
+    student(Student),
+    course(Course),
+    \+ missing_direct(Student, Course, _).
+
+% --- Задание 5: Транзитивные пререквизиты (рекурсия) ---
+prerequisite(Course, Prerequisite) :-
+    requires(Course, Prerequisite).
+prerequisite(Course, Prerequisite) :-
+    requires(Course, Intermediate),
+    prerequisite(Intermediate, Prerequisite).
+
+% --- Задание 6: Полный допуск и список недостающих курсов ---
+missing_all(Student, Course, Missing) :-
+    setof(P, (prerequisite(Course, P), \+ completed(Student, P)), Missing), !.
+missing_all(_, _, []).
+
+eligible(Student, Course) :-
+    student(Student),
+    course(Course),
+    missing_all(Student, Course, []).
+
+% --- Задание 7: Безопасность рекурсии (обход циклов) ---
+safe_prerequisite(Course, Prerequisite) :-
+    safe_prerequisite(Course, Prerequisite, [Course]).
+safe_prerequisite(Course, Prerequisite, _) :-
+    requires(Course, Prerequisite).
+safe_prerequisite(Course, Prerequisite, Visited) :-
+    requires(Course, Next),
+    \+ memberchk(Next, Visited),
+    safe_prerequisite(Next, Prerequisite, [Next|Visited]).
+
+% --- Задание 8: Интегрированный предикат рекомендаций ---
+recommendation(Student, Course, eligible, []) :-
+    eligible(Student, Course).
+recommendation(Student, Course, missing, Missing) :-
+    missing_all(Student, Course, Missing),
+    Missing \= [].
+
+% --- Индивидуальный вариант (Вариант 2: Запись на курс / can_enroll) ---
+capacity(programming_1, 5).
+capacity(artificial_intelligence, 2).
+
+enrolled_count(programming_1, 4).
+enrolled_count(artificial_intelligence, 2).
+
+can_enroll(Student, Course) :-
+    student(Student),
+    course(Course),
+    eligible(Student, Course),
+    capacity(Course, Max),
+    enrolled_count(Course, Current),
+    Current < Max.
+
+/* ==========================================
+   КОНТРОЛЬНЫЕ ЗАПРОСЫ ДЛЯ ПРОВЕРКИ (выполнять в SWI-Prolog):
+   
+   1. Загрузка файла:
+      ?- [lab10].  (или consult('lab10.pl').)
+
+   2. Задание 1 (Факты):
+      ?- completed(aliya, programming_1).
+      ?- completed(aliya, machine_learning).
+
+   3. Задание 2 (Правила):
+      ?- strong_student(Student).
+
+   4. Задание 3 (Унификация):
+      ?- record(Name, Course) = record(aida, databases).
+      ?- pair(X, X) = pair(aida, miras).
+
+   5. Задание 4 (Непосредственный допуск):
+      ?- immediate_eligible(dana, artificial_intelligence).
+
+   6. Задание 5 (Транзитивные зависимости):
+      ?- prerequisite(artificial_intelligence, programming_1).
+
+   7. Задание 6 (Полный допуск):
+      ?- eligible(aida, artificial_intelligence).
+      ?- missing_all(miras, artificial_intelligence, Missing).
+
+   8. Задание 8 (Рекомендации):
+      ?- recommendation(miras, artificial_intelligence, Status, Missing).
+
+   9. Индивидуальный вариант:
+      ?- can_enroll(aida, artificial_intelligence).
+========================================== */
